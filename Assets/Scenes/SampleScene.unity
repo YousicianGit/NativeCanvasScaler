@@ -245,7 +245,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_ReferencePixelsPerUnit: 100
-  m_ReferenceResolution: {x: 667, y: 375}
+  m_ReferenceResolution: {x: 375, y: 667}
 --- !u!223 &242149867
 Canvas:
   m_ObjectHideFlags: 0

@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.EventSystems;
 
@@ -57,6 +58,21 @@ public class NativeCanvasScaler : UIBehaviour
     private float m_PrevScaleFactor = 1;
     private float m_PrevReferencePixelsPerUnit = 100;
 
+#if UNITY_EDITOR
+    /// <summary>
+    /// Device information to show in the inspector when the Device Simulator is active
+    /// </summary>
+    public static string DeviceInfo { get; private set; }
+
+    /// <summary>
+    /// When Device Simulator is inactive, a density factor can be selected from the inspector.
+    /// </summary>
+    /// <remarks>
+    /// This is useful for testing desktop scaling, which is currently not supported by Device Simulator.
+    /// </remarks>
+    public static float SimulatedDensityFactor { get; set; } = 2f;
+#endif
+
     protected override void OnEnable()
     {
         base.OnEnable();
@@ -89,14 +105,82 @@ public class NativeCanvasScaler : UIBehaviour
         if (m_Canvas == null || !m_Canvas.isRootCanvas)
             return;
 
-#if UNITY_ANDROID && !UNITY_EDITOR
+#if UNITY_EDITOR
+        float screenDensityFactor = SimulatedDensityFactor;
+
+        if (SystemInfo.operatingSystem.StartsWith("iOS"))
+        {
+            // Guess the screen density factor based on the resolution
+            DeviceInfo = "Unknown device (1x)";
+
+            void GuessDensity(int pixels, float density, string device)
+            {
+                if (Screen.width == pixels || Screen.height == pixels)
+                {
+                    screenDensityFactor = density;
+                    DeviceInfo = $"{device} ({density:0.##}x)";
+                }
+            }
+
+            GuessDensity(2160, 2f, "iPad 7, 8");
+            GuessDensity(2048, 2f, "iPad Retina");
+            GuessDensity(2360, 2f, "iPad Air 4");
+            GuessDensity(2224, 2f, "iPad Pro 10.5\"");
+            GuessDensity(2388, 2f, "iPad Pro 11\"");
+            GuessDensity(2732, 2f, "iPad Pro 12.9\"");
+
+            GuessDensity(960, 2f, "iPhone 4");
+            GuessDensity(1136, 2f, "iPhone 5, SE, iPod Touch");
+            GuessDensity(1334, 2f, "iPhone 6, 7, 8");
+            GuessDensity(2208, 3f, "iPhone 6, 7, 8 Plus"); // Actual render resolution, used by game window presets
+            GuessDensity(1920, 3f / 1.15f, "iPhone 6, 7, 8 Plus (Sim)"); // Actual screen resolution, used by Device Simulator
+            GuessDensity(2436, 3f, "iPhone X, XS, 11 Pro");
+            GuessDensity(1792, 2f, "iPhone XR, 11");
+            GuessDensity(2688, 3f, "iPhone XS Max, 11 Pro Max");
+        }
+        else if (SystemInfo.operatingSystem.StartsWith("Android"))
+        {
+            // Guess the screen density factor based on DPI. This assumes that the DPI values are simulated correctly
+            // by the Device Simulator
+            screenDensityFactor = Screen.dpi / 160;
+
+            // Show the density qualifier in the inspector
+            // See: https://developer.android.com/training/multiscreen/screendensities
+            string densityQualifier;
+            if (screenDensityFactor < 1.5f)
+            {
+                densityQualifier = "mdpi";
+            }
+            else if (screenDensityFactor < 2f)
+            {
+                densityQualifier = "hdpi";
+            }
+            else if (screenDensityFactor < 3f)
+            {
+                densityQualifier = "xhdpi";
+            }
+            else if (screenDensityFactor < 4f)
+            {
+                densityQualifier = "xxhdpi";
+            }
+            else
+            {
+                densityQualifier = "xxxhdpi";
+            }
+
+            DeviceInfo = $"Android {densityQualifier} ({screenDensityFactor:0.##}x)";
+        }
+#elif UNITY_EDITOR
+        // Use the screen density factor set in the canvas scaler's inspector
+        var screenDensityFactor = ScreenDensityFactor;
+#elif UNITY_ANDROID
         // On Android a medium-density screen with 160 dpi is the "baseline" density
         // See: https://developer.android.com/training/multiscreen/screendensities
         var screenDensityFactor = Screen.dpi / 160f;
-#elif UNITY_IOS && !UNITY_EDITOR
+#elif UNITY_IOS
         // This returns UIScreen.mainScreen.scale
         var screenDensityFactor = GetScreenScaleFactor();
-#elif UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
+#elif UNITY_STANDALONE_OSX
         // This returns NSScreen.mainScreen.backingScaleFactor
         // Note: It's always 2.0 for retina screens and 1.0 otherwise. While this value does not take into account the
         // screen scaling, it's actually taken into account in Screen.width/height.
@@ -104,7 +188,7 @@ public class NativeCanvasScaler : UIBehaviour
         // When scaling is set to "looks like 1680x1050" the render resolution is 3360x2100.
         // When scaling is set to "looks like 1024x640" the render resolution is 2048x1280.
         var screenDensityFactor = GetScreenScaleFactor();
-#elif UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+#elif UNITY_STANDALONE_WIN
         // On Windows the "100% scaling" is 96 DPI.
         var screenDensityFactor = Screen.dpi / 96;
 #else
