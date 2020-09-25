@@ -1,0 +1,8 @@
+{
+  "name": "com.yousician.nativecanvasscaler",
+  "displayName": "Native Canvas Scaler",
+  "version": "1.0.0",
+  "unity": "2019.4",
+  "description": "The Canvas Scaler component is used for controlling the overall scale and pixel density of UI elements in the Canvas. This implementation replicates the native behaviour of the device it runs on.",
+  "type": "library"
+}

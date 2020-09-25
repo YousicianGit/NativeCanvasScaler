@@ -1,6 +1,6 @@
 {
     "SystemInfoDefaultAssembly": true,
     "SystemInfoAssemblies": [
-        "NativeCanvasScaler"
+        "Yousician.NativeCanvasScaler"
     ]
 }

@@ -11,10 +11,10 @@ public class TextUpdater : MonoBehaviour
     public Text text;
 
     // Update is called once per frame
-    void Update()
+    private void Update()
     {
-        this.text.text = $@"Native: {Screen.width} x {Screen.height}
-Unity: {fullscreenTransform.rect.width} x {fullscreenTransform.rect.height}
+        this.text.text = $@"Screen: {Screen.width} x {Screen.height}
+Canvas: {fullscreenTransform.rect.width} x {fullscreenTransform.rect.height}
 Scale: {canvas.scaleFactor}x";
     }
 }

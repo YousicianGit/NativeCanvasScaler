@@ -596,7 +596,11 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: Enter play mode
+  m_Text: 'Screen: 750 x 1334
+
+    Canvas: 375 x 667
+
+    Scale: 2x'
 --- !u!222 &1310593713
 CanvasRenderer:
   m_ObjectHideFlags: 0
