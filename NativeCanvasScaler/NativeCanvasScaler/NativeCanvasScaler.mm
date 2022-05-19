@@ -3,5 +3,5 @@
 
 extern "C" float GetScreenScaleFactor()
 {
-    return NSScreen.mainScreen.backingScaleFactor;
+    return NSApplication.sharedApplication.mainWindow.screen.backingScaleFactor;
 }

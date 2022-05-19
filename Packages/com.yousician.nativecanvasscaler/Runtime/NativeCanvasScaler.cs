@@ -21,6 +21,10 @@ using UnityEngine.EventSystems;
 /// You can find the source code for this plugin in the following repository:
 /// https://github.com/YousicianGit/NativeCanvasScaler
 /// </remarks>
+
+// Roslyn warning: "don't prefix with m_"
+#pragma warning disable SA1308
+
 // ReSharper disable InconsistentNaming
 [RequireComponent(typeof(Canvas))]
 [ExecuteAlways]
@@ -35,8 +39,8 @@ public class NativeCanvasScaler : UIBehaviour
 	/// </summary>
 	public float referencePixelsPerUnit
 	{
-		get => m_ReferencePixelsPerUnit;
-		set => m_ReferencePixelsPerUnit = value;
+		get => this.m_ReferencePixelsPerUnit;
+		set => this.m_ReferencePixelsPerUnit = value;
 	}
 
 	[Tooltip("The minimum resolution the UI layout is designed for. If the screen resolution is larger, the UI will be expanded, and if it's smaller, the UI will be scaled down.")]
@@ -50,13 +54,16 @@ public class NativeCanvasScaler : UIBehaviour
 	/// </remarks>
 	public Vector2 referenceResolution
 	{
-		get => m_ReferenceResolution;
-		set => m_ReferenceResolution = value;
+		get => this.m_ReferenceResolution;
+		set => this.m_ReferenceResolution = value;
 	}
 
 	private Canvas m_Canvas;
 	private float m_PrevScaleFactor = 1;
 	private float m_PrevReferencePixelsPerUnit = 100;
+
+	[Tooltip("The scale factor that the designs are implemented with. For example if your UI uses a 1334x750 reference resolution - which is 2x the resolution of of an iPhone 6 - then the design scale factor should be set to 2.")]
+	[SerializeField] public float designScaleFactor = 1;
 
 #if UNITY_EDITOR
 	/// <summary>
@@ -71,21 +78,23 @@ public class NativeCanvasScaler : UIBehaviour
 	/// This is useful for testing desktop scaling, which is currently not supported by Device Simulator.
 	/// </remarks>
 	public static float SimulatedDensityFactor { get; set; } = 2f;
+#elif UNITY_STANDALONE_OSX
+	private static float cachedScreenDensityFactor;
 #endif
 
 	protected override void OnEnable()
 	{
 		base.OnEnable();
-		m_Canvas = GetComponent<Canvas>();
-		Handle();
+		this.m_Canvas = this.GetComponent<Canvas>();
+		this.Handle();
 
-		Assert.AreEqual(m_Canvas.renderMode, RenderMode.ScreenSpaceOverlay);
+		Assert.AreNotEqual(this.m_Canvas.renderMode, RenderMode.WorldSpace, "Canvas scalers don't work with World Space render mode");
 	}
 
 	protected override void OnDisable()
 	{
-		SetScaleFactor(1);
-		SetReferencePixelsPerUnit(100);
+		this.SetScaleFactor(1);
+		this.SetReferencePixelsPerUnit(100);
 		base.OnDisable();
 	}
 
@@ -94,24 +103,42 @@ public class NativeCanvasScaler : UIBehaviour
 	/// </summary>
 	protected virtual void Update()
 	{
-		Handle();
+		this.Handle();
 	}
 
-	///<summary>
+	/// <summary>
 	/// Method that handles calculations of canvas scaling.
-	///</summary>
+	/// </summary>
 	protected virtual void Handle()
 	{
-		if (m_Canvas == null || !m_Canvas.isRootCanvas)
+		if (this.m_Canvas == null || !this.m_Canvas.isRootCanvas)
+		{
 			return;
+		}
 
+		var screenDensityFactor = this.GetScreenDensityFactor();
+
+		var scaleFactor = Mathf.Min(
+			Screen.width / this.m_ReferenceResolution.x,
+			Screen.height / this.m_ReferenceResolution.y,
+			screenDensityFactor / this.designScaleFactor);
+
+		this.SetScaleFactor(scaleFactor);
+		this.SetReferencePixelsPerUnit(this.m_ReferencePixelsPerUnit);
+	}
+
+	/// <summary>
+	/// Method that calculates the screen density factor for the current device
+	/// </summary>
+	protected virtual float GetScreenDensityFactor()
+	{
 #if UNITY_EDITOR
 		float screenDensityFactor = SimulatedDensityFactor;
 
 		if (SystemInfo.operatingSystem.StartsWith("iOS"))
 		{
 			// Guess the screen density factor based on the resolution
-			DeviceInfo = "Unknown device (1x)";
+			DeviceInfo = $"Unknown device ({screenDensityFactor}x)";
 
 			void GuessDensity(int pixels, float density, string device)
 			{
@@ -122,12 +149,19 @@ public class NativeCanvasScaler : UIBehaviour
 				}
 			}
 
-			GuessDensity(2160, 2f, "iPad 7, 8");
+			// Unity Device Simulator does not have screen density information, therefore we have to guess it.
+			// See https://iosref.com/res for reference.
+			//
+			// The first parameter is the larger component of the actual resolution of the device.
+			// The second parameter is the scale factor.
+			// The third parameter is the name of the device(s).
+			GuessDensity(2160, 2f, "iPad 7, 8, 9");
 			GuessDensity(2048, 2f, "iPad Retina");
-			GuessDensity(2360, 2f, "iPad Air 4");
+			GuessDensity(2360, 2f, "iPad Air 4, 5");
 			GuessDensity(2224, 2f, "iPad Pro 10.5\"");
 			GuessDensity(2388, 2f, "iPad Pro 11\"");
 			GuessDensity(2732, 2f, "iPad Pro 12.9\"");
+			GuessDensity(2266, 2f, "iPad mini 6");
 
 			GuessDensity(960, 2f, "iPhone 4");
 			GuessDensity(1136, 2f, "iPhone 5, SE, iPod Touch");
@@ -137,6 +171,10 @@ public class NativeCanvasScaler : UIBehaviour
 			GuessDensity(2436, 3f, "iPhone X, XS, 11 Pro");
 			GuessDensity(1792, 2f, "iPhone XR, 11");
 			GuessDensity(2688, 3f, "iPhone XS Max, 11 Pro Max");
+			GuessDensity(2338, 2.88f, "iPhone 12, 13 mini (Sim)"); // The Device Simulator incorrectly sets 2338 as the screen height instead of 2340
+			GuessDensity(2340, 2.88f, "iPhone 12, 13 mini");
+			GuessDensity(2532, 3f, "iPhone 12, 13 (Pro)");
+			GuessDensity(2778, 3f, "iPhone 12, 13 Pro Max");
 		}
 		else if (SystemInfo.operatingSystem.StartsWith("Android"))
 		{
@@ -170,9 +208,6 @@ public class NativeCanvasScaler : UIBehaviour
 
 			DeviceInfo = $"Android {densityQualifier} ({screenDensityFactor:0.##}x)";
 		}
-#elif UNITY_EDITOR
-		// Use the screen density factor set in the canvas scaler's inspector
-		var screenDensityFactor = ScreenDensityFactor;
 #elif UNITY_ANDROID
 		// On Android a medium-density screen with 160 dpi is the "baseline" density
 		// See: https://developer.android.com/training/multiscreen/screendensities
@@ -181,13 +216,24 @@ public class NativeCanvasScaler : UIBehaviour
 		// This returns UIScreen.mainScreen.scale
 		var screenDensityFactor = GetScreenScaleFactor();
 #elif UNITY_STANDALONE_OSX
-		// This returns NSScreen.mainScreen.backingScaleFactor
+		// This returns NSApplication.sharedApplication.mainWindow.screen.backingScaleFactor
 		// Note: It's always 2.0 for retina screens and 1.0 otherwise. While this value does not take into account the
 		// screen scaling, it's actually taken into account in Screen.width/height.
 		// For example on a Macbook Pro 15" with 2880x1800 screen resolution:
 		// When scaling is set to "looks like 1680x1050" the render resolution is 3360x2100.
 		// When scaling is set to "looks like 1024x640" the render resolution is 2048x1280.
-		var screenDensityFactor = GetScreenScaleFactor();
+		var currentScreenDensityFactor = GetScreenScaleFactor();
+
+		if (currentScreenDensityFactor > 0)
+		{
+			// The value is 0 when another application is focused, so we only update the number if it's greater than 0.
+			// The value is cached as a static variable to ensure that menus are scaled correctly when they are opened
+			// while the app is in the background.
+			cachedScreenDensityFactor = currentScreenDensityFactor;
+		}
+
+		// Copy into a local variable because it will be modified to apply the desktop density multiplier
+		var screenDensityFactor = cachedScreenDensityFactor;
 #elif UNITY_STANDALONE_WIN
 		// On Windows the "100% scaling" is 96 DPI.
 		var screenDensityFactor = Screen.dpi / 96;
@@ -196,19 +242,14 @@ public class NativeCanvasScaler : UIBehaviour
 #endif
 
 		// If we don't get a valid screen density (e.g. Screen.dpi is zero), we assume 1x density
-		if (screenDensityFactor <= 0)
-		{
-			screenDensityFactor = 1;
-		}
-
-		var scaleFactor = Mathf.Min(Screen.width / m_ReferenceResolution.x, Screen.height / m_ReferenceResolution.y, screenDensityFactor);
-
-		SetScaleFactor(scaleFactor);
-		SetReferencePixelsPerUnit(m_ReferencePixelsPerUnit);
+		return Math.Max(screenDensityFactor, 1);
 	}
 
-#if UNITY_IOS || UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
+#if UNITY_IOS
 	[System.Runtime.InteropServices.DllImport("__Internal")]
+	private static extern float GetScreenScaleFactor();
+#elif UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
+	[System.Runtime.InteropServices.DllImport("NativeCanvasScaler")]
 	private static extern float GetScreenScaleFactor();
 #endif
 
@@ -218,11 +259,11 @@ public class NativeCanvasScaler : UIBehaviour
 	/// <param name="scaleFactor">The scale factor to use.</param>
 	protected void SetScaleFactor(float scaleFactor)
 	{
-		if (scaleFactor == m_PrevScaleFactor)
+		if (scaleFactor == this.m_PrevScaleFactor)
 			return;
 
-		m_Canvas.scaleFactor = scaleFactor;
-		m_PrevScaleFactor = scaleFactor;
+		this.m_Canvas.scaleFactor = scaleFactor;
+		this.m_PrevScaleFactor = scaleFactor;
 	}
 
 	/// <summary>
@@ -231,10 +272,12 @@ public class NativeCanvasScaler : UIBehaviour
 	/// <param name="referencePixelsPerUnit">The new reference pixels per Unity value</param>
 	protected void SetReferencePixelsPerUnit(float referencePixelsPerUnit)
 	{
-		if (referencePixelsPerUnit == m_PrevReferencePixelsPerUnit)
+		if (referencePixelsPerUnit == this.m_PrevReferencePixelsPerUnit)
 			return;
 
-		m_Canvas.referencePixelsPerUnit = referencePixelsPerUnit;
-		m_PrevReferencePixelsPerUnit = referencePixelsPerUnit;
+		this.m_Canvas.referencePixelsPerUnit = referencePixelsPerUnit;
+		this.m_PrevReferencePixelsPerUnit = referencePixelsPerUnit;
 	}
 }
+
+#pragma warning restore SA1308

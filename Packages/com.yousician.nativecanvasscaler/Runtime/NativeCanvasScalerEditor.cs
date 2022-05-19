@@ -43,11 +43,14 @@ public class NativeCanvasScalerEditor : Editor
 	{
 		if (GUILayout.Toggle(NativeCanvasScaler.SimulatedDensityFactor == factor, new GUIContent(label, tooltip), EditorStyles.toolbarButton))
 		{
-			NativeCanvasScaler.SimulatedDensityFactor = factor;
-
-			foreach (var canvasScaler in this.targets)
+			if (NativeCanvasScaler.SimulatedDensityFactor != factor)
 			{
-				EditorUtility.SetDirty(canvasScaler);
+				NativeCanvasScaler.SimulatedDensityFactor = factor;
+
+				foreach (var canvasScaler in this.targets)
+				{
+					EditorUtility.SetDirty(canvasScaler);
+				}
 			}
 		}
 	}

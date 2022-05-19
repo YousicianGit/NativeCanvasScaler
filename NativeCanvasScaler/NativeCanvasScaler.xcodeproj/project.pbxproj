@@ -251,9 +251,10 @@
 		67760F0625190FEF0033EB98 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = UM63X339PH;
+				DEVELOPMENT_TEAM = "";
 				INFOPLIST_FILE = NativeCanvasScaler/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
 				PRODUCT_BUNDLE_IDENTIFIER = com.yousician.NativeCanvasScaler;
@@ -266,9 +267,10 @@
 		67760F0725190FEF0033EB98 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = UM63X339PH;
+				DEVELOPMENT_TEAM = "";
 				INFOPLIST_FILE = NativeCanvasScaler/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
 				PRODUCT_BUNDLE_IDENTIFIER = com.yousician.NativeCanvasScaler;
