@@ -9,4 +9,4 @@ https://www.paintcodeapp.com/news/ultimate-guide-to-iphone-resolutions
 
 This is a trimmed-down version of Unity's Canvas Scaler, hence the naming of variables following Unity's style.
 
-You can read more about how does works by checking the comments in [NativeCanvasScaler](Runtime/NativeCanvasScaler.cs).
+You can read more about how does works by checking the comments in [NativeCanvasScaler](../Runtime/NativeCanvasScaler.cs).
